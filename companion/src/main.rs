@@ -1,9 +1,9 @@
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 mod app;
-mod chatlog;
 mod clipboard;
 mod config;
+mod strip;
 mod text;
 mod translate;
 mod worker;
@@ -11,6 +11,17 @@ mod worker;
 use eframe::egui;
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
+
+fn decode_file(path: &str) {
+    let img = match xcap::image::open(path) {
+        Ok(img) => img.to_rgba8(),
+        Err(e) => return println!("Could not open {path}: {e}"),
+    };
+    match strip::find(&img) {
+        None => println!("No pixel strip in {path}"),
+        Some(lock) => println!("Strip at {},{} ({} px blocks): {:?}", lock.x, lock.y, lock.block, strip::decode(&img, lock)),
+    }
+}
 
 /// egui ships without Chinese glyphs; borrow a system font if one exists.
 fn add_cjk_font(ctx: &egui::Context) {
@@ -36,6 +47,12 @@ fn add_cjk_font(ctx: &egui::Context) {
 }
 
 fn main() -> eframe::Result {
+    // `translate-companion --decode shot.png` reads a strip from a screenshot.
+    let args: Vec<String> = std::env::args().collect();
+    if args.len() == 3 && args[1] == "--decode" {
+        decode_file(&args[2]);
+        return Ok(());
+    }
     let config = Arc::new(Mutex::new(config::load()));
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
@@ -55,12 +72,12 @@ fn main() -> eframe::Result {
             let (ui_tx, ui_rx) = mpsc::channel();
             let ui = worker::UiSender::new(ui_tx, cc.egui_ctx.clone());
             let (clip_tx, clip_rx) = mpsc::channel();
-            let (log_tx, log_rx) = mpsc::channel();
+            let (strip_tx, strip_rx) = mpsc::channel();
             let (interactive_tx, interactive_rx) = mpsc::channel();
 
-            worker::spawn(config.clone(), log_rx, ui.clone(), clip_tx.clone());
+            worker::spawn(config.clone(), strip_rx, ui.clone(), clip_tx.clone());
             worker::spawn(config.clone(), interactive_rx, ui.clone(), clip_tx);
-            chatlog::spawn(config.clone(), log_tx, ui.clone());
+            strip::spawn(strip_tx, ui.clone());
             clipboard::spawn(clip_rx, interactive_tx.clone(), ui);
 
             Ok(Box::new(app::TranslateApp::new(config, ui_rx, interactive_tx)))

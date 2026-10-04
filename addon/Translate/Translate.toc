@@ -7,4 +7,5 @@
 
 Core.lua
 UI.lua
+Strip.lua
 Chat.lua

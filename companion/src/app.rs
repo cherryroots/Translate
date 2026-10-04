@@ -4,7 +4,6 @@ use eframe::egui::{self, Color32, RichText, ViewportBuilder, ViewportCommand, Vi
 use std::collections::VecDeque;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
-use std::time::{Duration, Instant};
 
 struct OverlayLine {
     speaker: String,
@@ -24,9 +23,8 @@ pub struct TranslateApp {
     locked: bool,
     overlay_start: egui::Pos2,
     overlay_rect: Option<egui::Rect>,
-    log_last_grew: Option<Instant>,
-    log_lines: usize,
     test_result: String,
+    strip_status: String,
 }
 
 impl TranslateApp {
@@ -39,15 +37,14 @@ impl TranslateApp {
             events,
             interactive,
             lines: VecDeque::new(),
-            status: "Starting".into(),
+            status: "Ready".into(),
             notice: String::new(),
             reply: String::new(),
             locked: true,
             overlay_start,
             overlay_rect: None,
-            log_last_grew: None,
-            log_lines: 0,
             test_result: String::new(),
+            strip_status: "Starting the pixel strip reader".into(),
         }
     }
 
@@ -80,10 +77,7 @@ impl TranslateApp {
                         Err(e) => format!("Model test failed: {e}"),
                     };
                 }
-                UiEvent::LogGrew { lines } => {
-                    self.log_last_grew = Some(Instant::now());
-                    self.log_lines += lines;
-                }
+                UiEvent::Strip(text) => self.strip_status = text,
                 UiEvent::Status(text) => self.status = text,
             }
         }
@@ -108,15 +102,7 @@ impl TranslateApp {
             if !self.notice.is_empty() {
                 ui.colored_label(Color32::from_rgb(120, 200, 255), &self.notice);
             }
-            let activity = match self.log_last_grew {
-                Some(t) => format!(
-                    "Chat log last written {} s ago, {} lines read since start",
-                    t.elapsed().as_secs(),
-                    self.log_lines
-                ),
-                None => "Chat log has not been written since the companion started".into(),
-            };
-            ui.label(activity);
+            ui.label(&self.strip_status);
             ui.horizontal(|ui| {
                 if ui.button("Test model").clicked() {
                     // Test what is typed in Settings, even before Save.
@@ -156,9 +142,6 @@ impl TranslateApp {
 
             egui::CollapsingHeader::new("Settings").default_open(false).show(ui, |ui| {
                 egui::Grid::new("settings").num_columns(2).show(ui, |ui| {
-                    ui.label("Chat log file");
-                    ui.add(egui::TextEdit::singleline(&mut self.draft.chat_log_path).desired_width(360.0));
-                    ui.end_row();
                     ui.label("API base URL");
                     ui.text_edit_singleline(&mut self.draft.api_base);
                     ui.end_row();
@@ -259,8 +242,6 @@ impl TranslateApp {
 impl eframe::App for TranslateApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
-        // Keeps the "last written N s ago" counter ticking.
-        ctx.request_repaint_after(Duration::from_secs(1));
         self.drain_events();
         self.control_panel(ui);
         self.overlay(&ctx);

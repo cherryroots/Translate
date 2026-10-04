@@ -9,7 +9,7 @@ use std::time::Instant;
 pub const TEST_LINE: &str = "金团来人 缺奶 速度";
 
 pub enum Job {
-    /// A Chinese line read from the chat log.
+    /// A Chinese line read from the addon's pixel strip.
     Incoming { speaker: String, text: String },
     /// A line copied from the addon window as "TR#<id> <text>".
     Tagged { id: u64, text: String },
@@ -24,8 +24,8 @@ pub enum UiEvent {
     PasteReady { id: u64, english: String },
     ReplyReady { english: String, chinese: String },
     TestResult { result: Result<String, String>, seconds: f32 },
-    /// The chat log grew; carries how many complete lines arrived.
-    LogGrew { lines: usize },
+    /// Pixel strip state: searching, or where it was found.
+    Strip(String),
     Status(String),
 }
 

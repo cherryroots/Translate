@@ -34,11 +34,18 @@ function ns.CopyText(id)
     return entry and (PREFIX .. id .. " " .. entry.text) or ""
 end
 
-local function Store(text, author)
+-- Chat frames each run the filter, so one line can arrive several times.
+-- lineID is unique per line and maps it to a single stored id.
+local byLine = {}
+
+local function Store(text, author, lineID)
     local id = nextId
     nextId = nextId + 1
-    ns.messages[id] = { text = StripCodes(text), author = author }
+    ns.messages[id] = { text = StripCodes(text), author = author, lineID = lineID }
+    if lineID then byLine[lineID] = id end
     while nextId - oldestId > KEEP do
+        local old = ns.messages[oldestId]
+        if old and old.lineID then byLine[old.lineID] = nil end
         ns.messages[oldestId] = nil
         ns.translations[oldestId] = nil
         oldestId = oldestId + 1
@@ -66,12 +73,38 @@ function ns.ReceiveTranslation(text, fallbackId)
     ns.RefreshResult(id)
 end
 
-local function Filter(_, _, msg, author, ...)
-    -- Secret strings cannot be read. Leave the line exactly as it came.
-    if ns.IsSecret(msg) or ns.IsSecret(author) then return false end
-    if type(msg) ~= "string" or not HasChinese(msg) then return false end
-    local id = Store(msg, type(author) == "string" and Ambiguate(author, "short") or nil)
-    if not ns.db.showLinks then return false end
+local LABELS = {
+    CHAT_MSG_SAY = "Say", CHAT_MSG_YELL = "Yell", CHAT_MSG_WHISPER = "Whisper",
+    CHAT_MSG_PARTY = "Party", CHAT_MSG_PARTY_LEADER = "Party",
+    CHAT_MSG_RAID = "Raid", CHAT_MSG_RAID_LEADER = "Raid", CHAT_MSG_RAID_WARNING = "Raid Warning",
+    CHAT_MSG_INSTANCE_CHAT = "Instance", CHAT_MSG_INSTANCE_CHAT_LEADER = "Instance",
+    CHAT_MSG_GUILD = "Guild", CHAT_MSG_OFFICER = "Officer",
+}
+
+-- Stores a Chinese line once and sends it to the pixel strip. Returns its id,
+-- or nil when the line is not Chinese or cannot be read (secret values).
+-- Arguments follow the CHAT_MSG_* payload; lineID is the 11th.
+local function Capture(event, msg, author, _, channel, _, _, _, _, _, _, lineID)
+    if ns.IsSecret(msg) or ns.IsSecret(author) or ns.IsSecret(channel) or ns.IsSecret(lineID) then
+        return nil
+    end
+    if type(msg) ~= "string" or not HasChinese(msg) then return nil end
+    if lineID and byLine[lineID] then return byLine[lineID] end
+
+    local name = type(author) == "string" and Ambiguate(author, "short") or "?"
+    local id = Store(msg, name, lineID)
+    local label = LABELS[event]
+    if event == "CHAT_MSG_CHANNEL" and type(channel) == "string" and channel ~= "" then
+        label = channel
+    end
+    local speaker = label and ("[" .. label .. "] " .. name) or name
+    ns.SendToStrip(id .. "\t" .. speaker .. "\t" .. ns.messages[id].text)
+    return id
+end
+
+local function Filter(_, event, msg, author, ...)
+    local id = Capture(event, msg, author, ...)
+    if not id or not ns.db.showLinks then return false end
     local link = "|Haddon:" .. addonName .. ":" .. id .. "|h|cff66ccff[T]|r|h"
     return false, msg .. " " .. link, author, ...
 end
@@ -97,9 +130,11 @@ function ns.InitChat()
         for _, event in ipairs(CHAT_EVENTS) do addFilter(event, Filter) end
     end
 
-    -- Every chat line, secret or not, should reach the log file promptly,
-    -- even on channels no chat window shows.
-    for _, event in ipairs(CHAT_EVENTS) do ns.On(event, ns.ScheduleFlush) end
+    -- Also capture lines on channels no chat window shows. Capture skips
+    -- lines the filter already stored.
+    for _, event in ipairs(CHAT_EVENTS) do
+        ns.On(event, function(...) Capture(event, ...) end)
+    end
 
     -- Clicks on |Haddon:...| links arrive through EventRegistry on Mainline.
     if EventRegistry and EventRegistry.RegisterCallback then

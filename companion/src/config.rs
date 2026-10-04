@@ -4,8 +4,6 @@ use std::path::PathBuf;
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
-    /// Full path to WoWChatLog.txt inside the client's Logs folder.
-    pub chat_log_path: String,
     /// Any OpenAI-compatible base URL, ending before /chat/completions.
     pub api_base: String,
     /// Left empty for local servers such as Ollama.
@@ -24,8 +22,6 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Self {
-            chat_log_path: r"C:\Program Files (x86)\World of Warcraft\_classic_beta_\Logs\WoWChatLog.txt"
-                .into(),
             api_base: "http://localhost:11434/v1".into(),
             api_key: String::new(),
             model: "hf.co/tencent/HY-MT1.5-7B-GGUF:Q4_K_M".into(),
