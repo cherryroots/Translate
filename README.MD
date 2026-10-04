@@ -1,8 +1,8 @@
 # Translate
 
-Chinese to English chat translation for WoW: Forever, in two parts:
+Chinese to English chat translation for WoW: Forever and retail World of Warcraft, in two parts:
 
-- **`addon/Translate`**: the in-game addon (`## Interface: 16001`).
+- **`addon/Translate`**: the in-game addon. One folder loads in both clients (`## Interface: 16001, 120105`).
 - **`companion`**: a small Rust app that runs next to the game, translates through any OpenAI-compatible API, and draws the English over your chat box.
 
 WoW addons cannot reach the internet, and WoW only writes its chat log at logout, so the addon hands new lines to the companion through the screen and the clipboard. Nothing presses keys for you.
@@ -17,13 +17,14 @@ Reading the strip is screen capture: it only reads pixels and never sends input 
 
 ## Install the addon
 
-Copy `addon/Translate` to:
+Copy `addon/Translate` to the client you play:
 
 ```
-World of Warcraft\_classic_beta_\Interface\AddOns\Translate\
+Forever beta: World of Warcraft\_classic_beta_\Interface\AddOns\Translate\
+Retail:       World of Warcraft\_retail_\Interface\AddOns\Translate\
 ```
 
-Restart the client if the addon does not appear in the list. In game:
+Restart the client if the addon does not appear in the list. If retail lists it as out of date, the retail patch has moved past `120105`: check the number with `/dump select(4, GetBuildInfo())` and update the `## Interface:` line. In game:
 
 | Command | Does |
 | --- | --- |
