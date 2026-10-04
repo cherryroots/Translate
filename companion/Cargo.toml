@@ -6,7 +6,8 @@ description = "Reads the WoW chat log, translates Chinese chat to English, and s
 license = "MIT"
 
 [dependencies]
-eframe = "0.36"
+# glow: its Windows path keeps child viewports transparent; wgpu often falls back to opaque.
+eframe = { version = "0.36", default-features = false, features = ["accesskit", "default_fonts", "glow", "wayland", "x11"] }
 arboard = "3.6"
 ureq = { version = "2.12", features = ["json"] }
 serde = { version = "1", features = ["derive"] }

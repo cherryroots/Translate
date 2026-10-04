@@ -40,7 +40,10 @@ fn main() -> eframe::Result {
     let options = eframe::NativeOptions {
         viewport: egui::ViewportBuilder::default()
             .with_title("Translate companion")
-            .with_inner_size([560.0, 300.0]),
+            .with_inner_size([560.0, 300.0])
+            // The renderer only gets an alpha channel when the root window asks
+            // for one; without it the overlay is drawn solid black.
+            .with_transparent(true),
         ..Default::default()
     };
 
