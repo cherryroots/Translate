@@ -1,0 +1,16 @@
+name: Feature or slang suggestion
+description: Suggest a feature, or WoW slang that translates badly
+labels: [enhancement]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like?
+    validations:
+      required: true
+  - type: textarea
+    id: slang
+    attributes:
+      label: Slang that translates badly (optional)
+      description: The Chinese line, what the model said, and what it should say.
+      placeholder: "做任务 came out as \"doing tasks\", should be \"questing\""
