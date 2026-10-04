@@ -77,7 +77,7 @@ To debug the strip, take a screenshot and run `translate-companion --decode scre
 
 ## Making a release
 
-Run the **Build** workflow from the Actions tab with a tag such as `v0.2.0` in the *release* box, or push a `v*` tag. The workflow builds everything and publishes the release with notes generated from the merged pull requests. Bump `## Version` in `Translate.toc` and `version` in `companion/Cargo.toml` first.
+Run the **Build** workflow from the Actions tab with a tag such as `v0.2.0` in the *release* box, or push a `v*` tag. The workflow builds everything and publishes the release with notes generated from the merged pull requests. The tag sets the version: a `v0.2.0` release builds the addon and companion as 0.2.0, so there is nothing to bump by hand. The files in the repo keep their old number.
 
 ## License
 
