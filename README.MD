@@ -46,7 +46,7 @@ On first start it writes `config.json` next to the program. Open **Settings** in
 - **LM Studio:** load the same GGUF, start the server, and use `http://localhost:1234/v1` with the model name LM Studio shows.
 - **OpenAI:** `https://api.openai.com/v1` with your key and a model such as `gpt-4o-mini`.
 
-When the model name contains `hy-mt`, the companion switches to HY-MT's own prompt and sampling settings from its model card, and passes the WoW slang found in each line (金团, 缺奶, 坦克...) as terminology hints. Other models get a system prompt that explains the slang instead.
+When the model name contains `hy-mt`, the companion switches to HY-MT's own prompt and sampling settings from its model card, and passes the WoW slang found in each line (缺奶, 坦克, 副本...) as terminology hints. Other models get a system prompt that explains the slang instead.
 
 **Test model** sends a fixed Chinese line to the configured model and shows the answer and how long it took. The window also says whether it has found the pixel strip.
 

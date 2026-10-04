@@ -69,7 +69,7 @@ local commands = {
             ns.Print("No SendChatMessage on this client. Type /s 需要奶妈 by hand.")
             return
         end
-        send("需要奶妈 来人 (Translate test)", "SAY")
+        send("大家好 (Translate test)", "SAY")
         ns.Print("Sent a test line in /say. The companion overlay should show it in English shortly.")
     end,
     probe = function()
