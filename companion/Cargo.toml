@@ -17,3 +17,6 @@ xcap = "0.9"
 [profile.release]
 opt-level = 3
 strip = true
+
+[build-dependencies]
+winresource = "0.1"

@@ -12,6 +12,15 @@ use eframe::egui;
 use std::sync::mpsc;
 use std::sync::{Arc, Mutex};
 
+/// The title bar and taskbar icon, built into the binary.
+fn window_icon() -> egui::IconData {
+    let image = xcap::image::load_from_memory(include_bytes!("../icon.png"))
+        .expect("icon.png is a valid PNG")
+        .to_rgba8();
+    let (width, height) = image.dimensions();
+    egui::IconData { rgba: image.into_raw(), width, height }
+}
+
 fn decode_file(path: &str) {
     let img = match xcap::image::open(path) {
         Ok(img) => img.to_rgba8(),
@@ -59,6 +68,7 @@ fn main() -> eframe::Result {
             .with_title("Translate companion")
             .with_inner_size([app::MIN_WIDTH, app::MIN_HEIGHT])
             .with_min_inner_size([app::MIN_WIDTH, app::MIN_HEIGHT])
+            .with_icon(window_icon())
             // The renderer only gets an alpha channel when the root window asks
             // for one; without it the overlay is drawn solid black.
             .with_transparent(true),

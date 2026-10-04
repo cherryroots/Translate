@@ -46,7 +46,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: companion -> target
-          key: ${{ matrix.target }}
+          key: ${{ matrix.name }}
 
       # xcap's Linux screen capture links against PipeWire and X11/Wayland.
       - name: Install Linux build dependencies

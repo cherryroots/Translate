@@ -3,6 +3,7 @@
 ## Notes: Chinese to English chat translation, paired with the Translate companion app.
 ## Author: cherryroots
 ## Version: 0.1.0
+## IconTexture: Interface\AddOns\Translate\icon
 ## SavedVariables: TranslateDB
 
 Core.lua
