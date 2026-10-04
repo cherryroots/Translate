@@ -15,9 +15,20 @@ WoW addons cannot reach the internet, and WoW only writes its chat log at logout
 
 Reading the strip is screen capture: it only reads pixels and never sends input to the game, but Blizzard's terms do not clearly allow or forbid it. Turn the strip off with `/tr strip` to rely on the click-to-translate route alone.
 
+## Download
+
+Get everything from the [latest release](https://github.com/cherryroots/Translate/releases/latest):
+
+| File | What it is |
+| --- | --- |
+| `Translate-addon.zip` | The addon, for WoW: Forever and retail |
+| `translate-companion-windows-x64.exe` | Companion app for Windows |
+| `translate-companion-macos-universal` | Companion app for macOS (Apple silicon and Intel) |
+| `translate-companion-linux-x64` | Companion app for Linux |
+
 ## Install the addon
 
-Copy `addon/Translate` to the client you play:
+Unzip `Translate-addon.zip` into the AddOns folder of the client you play, so the files end up in a `Translate` folder:
 
 ```
 Forever beta: World of Warcraft\_classic_beta_\Interface\AddOns\Translate\
@@ -36,7 +47,7 @@ Restart the client if the addon does not appear in the list. If retail lists it 
 
 ## Run the companion
 
-Download a build from the **Actions** tab (open the latest *Build* run and grab `translate-companion-<your OS>` under Artifacts), from a tagged release, or build it yourself with `cargo build --release` inside `companion/` (Linux also needs the PipeWire, X11 and Wayland development packages listed in `.github/workflows/build.yml`).
+Download the companion for your system from the [latest release](https://github.com/cherryroots/Translate/releases/latest) and put it in its own folder, since it writes `config.json` next to itself. Builds of unreleased changes are under the **Actions** tab (open the latest *Build* run and look under Artifacts). You can also build it yourself with `cargo build --release` inside `companion/` (Linux also needs the PipeWire, X11 and Wayland development packages listed in `.github/workflows/build.yml`).
 
 On macOS and Linux, browsers drop the execute permission, so run `chmod +x translate-companion-*` once. The macOS build is also unsigned: run `xattr -d com.apple.quarantine translate-companion-macos-*` or right-click it and choose Open. macOS will also ask for Screen Recording permission so the companion can read the strip.
 
@@ -63,6 +74,10 @@ To debug the strip, take a screenshot and run `translate-companion --decode scre
 ## Icon
 
 `assets/icon.svg` is the source for both icons. `companion/icon.png` is the window icon, `companion/icon.ico` is built into the Windows exe, and `addon/Translate/icon.tga` is shown in the AddOns list through `## IconTexture`. To change the icon, edit the SVG and re-export those three files at the same sizes.
+
+## Making a release
+
+Run the **Build** workflow from the Actions tab with a tag such as `v0.2.0` in the *release* box, or push a `v*` tag. The workflow builds everything and publishes the release with notes generated from the merged pull requests. Bump `## Version` in `Translate.toc` and `version` in `companion/Cargo.toml` first.
 
 ## License
 

@@ -6,6 +6,11 @@ on:
     tags: ["v*"]
   pull_request:
   workflow_dispatch:
+    inputs:
+      release:
+        description: "Publish this run as a release with this tag, such as v0.1.0. Leave empty for a plain build."
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -85,12 +90,6 @@ jobs:
           path: dist/translate-companion-${{ matrix.name }}*
           archive: false
 
-      - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v3
-        with:
-          files: dist/translate-companion-${{ matrix.name }}*
-
   addon:
     name: Addon
     runs-on: ubuntu-24.04
@@ -106,12 +105,36 @@ jobs:
           name: Translate-addon
           path: addon/
 
-      - name: Zip for release
-        if: startsWith(github.ref, 'refs/tags/v')
-        run: cd addon && zip -r ../Translate-addon.zip Translate
+  # Gathers every build into one release. On pull requests and plain builds
+  # it only checks that the files are there; it publishes for a v* tag push,
+  # or a manual run given a tag (which creates the tag on this commit).
+  release:
+    name: Release
+    needs: [companion, addon]
+    runs-on: ubuntu-24.04
+    env:
+      TAG: ${{ github.event_name == 'workflow_dispatch' && inputs.release || (startsWith(github.ref, 'refs/tags/v') && github.ref_name || '') }}
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          path: dist
+          merge-multiple: true
 
-      - name: Attach to release
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Zip the addon
+        run: |
+          cd dist
+          zip -qr Translate-addon.zip Translate
+          rm -r Translate
+          ls -l
+          for f in Translate-addon.zip translate-companion-windows-x64.exe translate-companion-macos-universal translate-companion-linux-x64; do
+            test -s "$f" || { echo "missing $f"; exit 1; }
+          done
+
+      - name: Publish
+        if: env.TAG != ''
         uses: softprops/action-gh-release@v3
         with:
-          files: Translate-addon.zip
+          tag_name: ${{ env.TAG }}
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          files: dist/*
