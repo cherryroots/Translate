@@ -56,5 +56,5 @@ To debug the strip, take a screenshot and run `translate-companion --decode scre
 ## Known limits
 
 - Chat text inside instances may be a secret value under Midnight rules. The addon cannot read those lines, so they are not translated.
-- Each strip frame holds about 375 bytes, so very long lines are cut at a character boundary.
+- Each strip frame holds 376 bytes, which fits any WoW chat message (255 bytes at most) plus the channel and name. Longer text would be cut at a character boundary.
 - The strip assumes the UI is drawn at the screen's physical resolution. If the companion never finds it, send a screenshot through `--decode`.
