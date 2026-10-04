@@ -95,9 +95,21 @@ fn request_body(model: &str, text: &str, direction: Direction) -> Value {
     })
 }
 
+/// Local servers (LM Studio, Ollama) serve the API under /v1; a bare
+/// `http://host:port` gets it added so a missing /v1 is not a silent failure.
+fn completions_url(base: &str) -> String {
+    let base = base.trim().trim_end_matches('/');
+    let after_scheme = base.split_once("://").map_or(base, |(_, rest)| rest);
+    if after_scheme.contains('/') {
+        format!("{base}/chat/completions")
+    } else {
+        format!("{base}/v1/chat/completions")
+    }
+}
+
 /// Sends one message to an OpenAI-compatible /chat/completions endpoint.
 pub fn translate(config: &Config, text: &str, direction: Direction) -> Result<String, String> {
-    let url = format!("{}/chat/completions", config.api_base.trim_end_matches('/'));
+    let url = completions_url(&config.api_base);
     let body = request_body(&config.model, text, direction);
 
     let mut request = ureq::post(&url).timeout(Duration::from_secs(60));
@@ -117,7 +129,10 @@ pub fn translate(config: &Config, text: &str, direction: Direction) -> Result<St
         .as_str()
         .map(clean_reply)
         .filter(|s| !s.is_empty())
-        .ok_or_else(|| "the API reply had no text".to_string())
+        .ok_or_else(|| {
+            let detail = response.to_string();
+            format!("{url} gave no translation: {}", detail.chars().take(200).collect::<String>())
+        })
 }
 
 /// Models sometimes wrap the answer in quotes or add a thinking block; drop both.
@@ -174,6 +189,14 @@ mod tests {
         let request = server.join().unwrap();
         assert!(request.starts_with("POST /v1/chat/completions"));
         assert!(request.contains("Bearer secret"));
+    }
+
+    #[test]
+    fn adds_v1_to_bare_host() {
+        assert_eq!(completions_url("http://localhost:1234"), "http://localhost:1234/v1/chat/completions");
+        assert_eq!(completions_url("http://localhost:1234/"), "http://localhost:1234/v1/chat/completions");
+        assert_eq!(completions_url("http://localhost:1234/v1/"), "http://localhost:1234/v1/chat/completions");
+        assert_eq!(completions_url("https://api.openai.com/v1"), "https://api.openai.com/v1/chat/completions");
     }
 
     #[test]
