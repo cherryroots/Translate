@@ -1,0 +1,117 @@
+name: Build
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  companion:
+    name: Companion (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows-x64
+            os: windows-latest
+            target: x86_64-pc-windows-msvc
+            exe: translate-companion.exe
+          # One job builds both Mac architectures and joins them with lipo,
+          # so only one macOS runner is queued.
+          - name: macos-universal
+            os: macos-latest
+            target: aarch64-apple-darwin,x86_64-apple-darwin
+            exe: translate-companion
+          - name: linux-x64
+            os: ubuntu-24.04
+            target: x86_64-unknown-linux-gnu
+            exe: translate-companion
+    defaults:
+      run:
+        shell: bash
+        working-directory: companion
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: companion -> target
+          key: ${{ matrix.target }}
+
+      # xcap's Linux screen capture links against PipeWire and X11/Wayland.
+      - name: Install Linux build dependencies
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libpipewire-0.3-dev libclang-dev pkg-config \
+            libxcb1-dev libxrandr-dev libdbus-1-dev libwayland-dev libegl-dev libgbm-dev
+
+      - name: Test
+        if: matrix.name == 'linux-x64'
+        run: cargo test --locked
+
+      - name: Build
+        run: |
+          for t in ${MATRIX_TARGET//,/ }; do
+            cargo build --release --locked --target "$t"
+          done
+        env:
+          MATRIX_TARGET: ${{ matrix.target }}
+
+      # Upload the program itself rather than an archive of it.
+      - name: Rename
+        run: |
+          mkdir -p ../dist
+          ext=""; [ "${{ runner.os }}" = "Windows" ] && ext=".exe"
+          out=../dist/translate-companion-${{ matrix.name }}$ext
+          bins=()
+          for t in ${MATRIX_TARGET//,/ }; do bins+=("target/$t/release/${{ matrix.exe }}"); done
+          if [ ${#bins[@]} -gt 1 ]; then lipo -create -output "$out" "${bins[@]}"; else cp "${bins[0]}" "$out"; fi
+        env:
+          MATRIX_TARGET: ${{ matrix.target }}
+
+      - uses: actions/upload-artifact@v7
+        with:
+          path: dist/translate-companion-${{ matrix.name }}*
+          archive: false
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v3
+        with:
+          files: dist/translate-companion-${{ matrix.name }}*
+
+  addon:
+    name: Addon
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check Lua syntax
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq lua5.1
+          for f in addon/Translate/*.lua; do luac5.1 -p "$f"; done
+      # GitHub zips folder artifacts once on download; the zip holds the Translate folder.
+      - uses: actions/upload-artifact@v7
+        with:
+          name: Translate-addon
+          path: addon/
+
+      - name: Zip for release
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: cd addon && zip -r ../Translate-addon.zip Translate
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v3
+        with:
+          files: Translate-addon.zip

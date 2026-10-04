@@ -1,0 +1,19 @@
+[package]
+name = "translate-companion"
+version = "0.1.0"
+edition = "2021"
+description = "Reads the WoW chat log, translates Chinese chat to English, and shows it in an overlay."
+license = "MIT"
+
+[dependencies]
+# glow: its Windows path keeps child viewports transparent; wgpu often falls back to opaque.
+eframe = { version = "0.36", default-features = false, features = ["accesskit", "default_fonts", "glow", "wayland", "x11"] }
+arboard = "3.6"
+ureq = { version = "2.12", features = ["json"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+xcap = "0.9"
+
+[profile.release]
+opt-level = 3
+strip = true

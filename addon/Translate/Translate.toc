@@ -1,0 +1,11 @@
+## Interface: 16001, 120105
+## Title: Translate
+## Notes: Chinese to English chat translation, paired with the Translate companion app.
+## Author: cherryroots
+## Version: 0.1.0
+## SavedVariables: TranslateDB
+
+Core.lua
+UI.lua
+Strip.lua
+Chat.lua
