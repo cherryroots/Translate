@@ -26,6 +26,8 @@ pub enum UiEvent {
     TestResult { result: Result<String, String>, seconds: f32 },
     /// Pixel strip state: searching, or where it was found.
     Strip(String),
+    /// Whether WoW has focus; None when the focused window cannot be read.
+    WowFocused(Option<bool>),
     Status(String),
 }
 

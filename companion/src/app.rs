@@ -26,11 +26,19 @@ pub struct TranslateApp {
     test_result: String,
     strip_status: String,
     fitted_height: f32,
+    wow_focused: Option<bool>,
+    overlay_hidden: bool,
 }
 
 /// Smallest companion window that shows every control with Settings closed.
 pub const MIN_WIDTH: f32 = 560.0;
 pub const MIN_HEIGHT: f32 = 150.0;
+
+const OFF_SCREEN: f32 = -32000.0;
+
+fn overlay_id() -> ViewportId {
+    ViewportId::from_hash_of("overlay")
+}
 
 impl TranslateApp {
     pub fn new(config: Arc<Mutex<Config>>, events: Receiver<UiEvent>, interactive: Sender<Job>) -> Self {
@@ -49,6 +57,8 @@ impl TranslateApp {
             overlay_start,
             overlay_rect: None,
             fitted_height: 0.0,
+            wow_focused: None,
+            overlay_hidden: false,
             test_result: String::new(),
             strip_status: "Starting the pixel strip reader".into(),
         }
@@ -84,6 +94,7 @@ impl TranslateApp {
                     };
                 }
                 UiEvent::Strip(text) => self.strip_status = text,
+                UiEvent::WowFocused(focused) => self.wow_focused = focused,
                 UiEvent::Status(text) => self.status = text,
             }
         }
@@ -173,6 +184,7 @@ impl TranslateApp {
                     self.lines.clear();
                 }
                 ui.checkbox(&mut self.draft.show_original, "Show Chinese too");
+                ui.checkbox(&mut self.draft.hide_when_unfocused, "Hide when WoW is in the background");
             });
 
             egui::CollapsingHeader::new("Settings").default_open(false).show(ui, |ui| {
@@ -221,13 +233,30 @@ impl TranslateApp {
             .with_inner_size([self.draft.overlay_width, self.draft.overlay_height]);
 
         let locked = self.locked;
+        // Hiding parks the window off screen instead of closing or hiding it:
+        // showing a window again can take focus from WoW, and Windows still
+        // draws a border around an empty transparent window.
+        let hidden = locked && self.draft.hide_when_unfocused && self.wow_focused == Some(false);
+        if hidden != self.overlay_hidden {
+            let pos = if hidden {
+                egui::pos2(OFF_SCREEN, OFF_SCREEN)
+            } else {
+                self.overlay_rect.map_or(self.overlay_start, |r| r.min)
+            };
+            ctx.send_viewport_cmd_to(overlay_id(), ViewportCommand::OuterPosition(pos));
+            self.overlay_hidden = hidden;
+        }
         let draft = self.draft.clone();
         let lines = &self.lines;
         let mut rect = self.overlay_rect;
 
-        ctx.show_viewport_immediate(ViewportId::from_hash_of("overlay"), builder, |root, _class| {
+        ctx.show_viewport_immediate(overlay_id(), builder, |root, _class| {
             let ctx = root.ctx().clone();
-            rect = ctx.input(|i| i.viewport().outer_rect).or(rect);
+            if hidden {
+                return;
+            }
+            // Skip the parked position, which can linger for a frame after showing.
+            rect = ctx.input(|i| i.viewport().outer_rect).filter(|r| r.min.x > OFF_SCREEN / 2.0).or(rect);
             let alpha = (draft.overlay_opacity * 255.0) as u8;
             let fill = if locked {
                 Color32::from_black_alpha(alpha)

@@ -50,7 +50,7 @@ When the model name contains `hy-mt`, the companion switches to HY-MT's own prom
 
 **Test model** sends a fixed Chinese line to the configured model and shows the answer and how long it took. The window also says whether it has found the pixel strip.
 
-Run WoW in **windowed** or **windowed (fullscreen)** mode; overlays cannot draw over exclusive fullscreen, and screen capture may see a black screen there. Click **Unlock overlay** to drag it over your chat frame, then **Lock** it so clicks pass through to the game. Keep the overlay off the top-left corner so it does not cover the strip.
+Run WoW in **windowed** or **windowed (fullscreen)** mode; overlays cannot draw over exclusive fullscreen, and screen capture may see a black screen there. Click **Unlock overlay** to drag it over your chat frame, then **Lock** it so clicks pass through to the game. While locked, the overlay hides whenever another window is in front of WoW; untick **Hide when WoW is in the background** to keep it always visible. Keep the overlay off the top-left corner so it does not cover the strip.
 
 To debug the strip, take a screenshot and run `translate-companion --decode screenshot.png`.
 
