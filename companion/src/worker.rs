@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Instant;
 
-pub const TEST_LINE: &str = "金团来人 缺奶 速度";
+pub const TEST_LINE: &str = "大家好，今天一起打副本吗？";
 
 pub enum Job {
     /// A Chinese line read from the addon's pixel strip.

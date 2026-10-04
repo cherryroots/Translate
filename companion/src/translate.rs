@@ -5,7 +5,7 @@ use std::time::Duration;
 const TO_ENGLISH: &str = "You translate World of Warcraft in-game chat from Chinese into natural, casual English, the way an English-speaking player would write it. \
 Keep player names, numbers, item names in brackets, and English words as they are. \
 Know the slang: 奶/奶妈/治疗 = healer, T/坦/坦克 = tank, 输出/DPS = dps, 来人/缺人 = LF more, 组/组队 = LFG, 车/车队/开车 = group run, \
-金团 = GDKP (gold run), 老板 = buyer, 打工 = booster, 拍卖 = auction, 1 = ready/yes, 2 = no, 散人 = pug, 工会/公会 = guild, 副本 = dungeon/raid. \
+老板 = buyer, 打工 = booster, 拍卖 = auction, 1 = ready/yes, 2 = no, 散人 = pug, 工会/公会 = guild, 副本 = dungeon/raid. \
 Reply with the translation only: no quotes, notes or romanization.";
 
 const TO_CHINESE: &str = "Translate the user's World of Warcraft chat message into casual Simplified Chinese, the way a Chinese player would type it in game chat. \
@@ -31,7 +31,6 @@ const SLANG: &[(&str, &str)] = &[
     ("组队", "LFG"),
     ("车队", "group run"),
     ("开车", "starting the run"),
-    ("金团", "GDKP run"),
     ("老板", "buyer"),
     ("打工", "booster"),
     ("散人", "pug"),
@@ -201,15 +200,15 @@ mod tests {
 
     #[test]
     fn hy_mt_uses_model_card_prompt_and_glossary() {
-        let body = request_body("hf.co/tencent/HY-MT1.5-7B-GGUF:Q4_K_M", "金团来人 缺奶", Direction::ToEnglish);
+        let body = request_body("hf.co/tencent/HY-MT1.5-7B-GGUF:Q4_K_M", "副本来人 缺奶", Direction::ToEnglish);
         let messages = body["messages"].as_array().unwrap();
         assert_eq!(messages.len(), 1, "HY-MT takes no system prompt");
         let prompt = messages[0]["content"].as_str().unwrap();
         assert!(prompt.starts_with("参考下面的翻译：\n"));
-        assert!(prompt.contains("金团 翻译成 GDKP run"));
+        assert!(prompt.contains("副本 翻译成 dungeon"));
         assert!(prompt.contains("缺奶 翻译成 need a healer"));
         assert!(!prompt.contains("坦克"));
-        assert!(prompt.ends_with("不要额外解释：\n金团来人 缺奶"));
+        assert!(prompt.ends_with("不要额外解释：\n副本来人 缺奶"));
         assert_eq!(body["top_k"], 20);
 
         let plain = request_body("HY-MT1.5-7B", "你好", Direction::ToEnglish);
