@@ -97,6 +97,10 @@ function ns.InitChat()
         for _, event in ipairs(CHAT_EVENTS) do addFilter(event, Filter) end
     end
 
+    -- Every chat line, secret or not, should reach the log file promptly,
+    -- even on channels no chat window shows.
+    for _, event in ipairs(CHAT_EVENTS) do ns.On(event, ns.ScheduleFlush) end
+
     -- Clicks on |Haddon:...| links arrive through EventRegistry on Mainline.
     if EventRegistry and EventRegistry.RegisterCallback then
         EventRegistry:RegisterCallback("SetItemRef", function(_, link) OnLinkClicked(link) end, ns)

@@ -4,6 +4,7 @@ use eframe::egui::{self, Color32, RichText, ViewportBuilder, ViewportCommand, Vi
 use std::collections::VecDeque;
 use std::sync::mpsc::{Receiver, Sender};
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
 
 struct OverlayLine {
     speaker: String,
@@ -23,6 +24,9 @@ pub struct TranslateApp {
     locked: bool,
     overlay_start: egui::Pos2,
     overlay_rect: Option<egui::Rect>,
+    log_last_grew: Option<Instant>,
+    log_lines: usize,
+    test_result: String,
 }
 
 impl TranslateApp {
@@ -41,6 +45,9 @@ impl TranslateApp {
             locked: true,
             overlay_start,
             overlay_rect: None,
+            log_last_grew: None,
+            log_lines: 0,
+            test_result: String::new(),
         }
     }
 
@@ -63,6 +70,19 @@ impl TranslateApp {
                 }
                 UiEvent::ReplyReady { english, chinese } => {
                     self.notice = format!("Copied \"{chinese}\" for \"{english}\". Paste it into WoW chat.");
+                }
+                UiEvent::TestResult { result, seconds } => {
+                    self.test_result = match result {
+                        Ok(english) if crate::text::has_chinese(&english) => {
+                            format!("The model answered but did not translate ({seconds:.1} s): {english}")
+                        }
+                        Ok(english) => format!("Model works ({seconds:.1} s): {} -> {english}", crate::worker::TEST_LINE),
+                        Err(e) => format!("Model test failed: {e}"),
+                    };
+                }
+                UiEvent::LogGrew { lines } => {
+                    self.log_last_grew = Some(Instant::now());
+                    self.log_lines += lines;
                 }
                 UiEvent::Status(text) => self.status = text,
             }
@@ -88,6 +108,26 @@ impl TranslateApp {
             if !self.notice.is_empty() {
                 ui.colored_label(Color32::from_rgb(120, 200, 255), &self.notice);
             }
+            let activity = match self.log_last_grew {
+                Some(t) => format!(
+                    "Chat log last written {} s ago, {} lines read since start",
+                    t.elapsed().as_secs(),
+                    self.log_lines
+                ),
+                None => "Chat log has not been written since the companion started".into(),
+            };
+            ui.label(activity);
+            ui.horizontal(|ui| {
+                if ui.button("Test model").clicked() {
+                    // Test what is typed in Settings, even before Save.
+                    *self.config.lock().unwrap() = self.draft.clone();
+                    let _ = self.interactive.send(Job::Test);
+                    self.test_result = format!("Testing {} at {}", self.draft.model, self.draft.api_base);
+                }
+                if !self.test_result.is_empty() {
+                    ui.label(&self.test_result);
+                }
+            });
             ui.separator();
 
             ui.label("Reply in Chinese (Enter copies the translation for pasting into WoW chat):");
@@ -219,6 +259,8 @@ impl TranslateApp {
 impl eframe::App for TranslateApp {
     fn ui(&mut self, ui: &mut egui::Ui, _frame: &mut eframe::Frame) {
         let ctx = ui.ctx().clone();
+        // Keeps the "last written N s ago" counter ticking.
+        ctx.request_repaint_after(Duration::from_secs(1));
         self.drain_events();
         self.control_panel(ui);
         self.overlay(&ctx);

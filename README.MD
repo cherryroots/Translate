@@ -28,6 +28,8 @@ Restart the client if the addon does not appear in the list. In game:
 | `/tr` | Open the window on the latest Chinese line (also use the `<` `>` buttons) |
 | `/tr log` | Toggle the chat log (the companion needs it on) |
 | `/tr links` | Toggle the `[T]` links |
+| `/tr test` | Say a Chinese test line in `/say` so it goes through chat and the chat log |
+| `/tr flush` | Toggle forced chat log writes (on by default, see below) |
 | `/tr probe` | Report which client features the addon found |
 
 ## Run the companion
@@ -44,6 +46,10 @@ On first start it writes `config.json` next to the program. Open **Settings** in
 When the model name contains `hy-mt`, the companion switches to HY-MT's own prompt and sampling settings from its model card, and passes the WoW slang found in each line (金团, 缺奶, 坦克...) as terminology hints. Other models get a system prompt that explains the slang instead.
 
 Run WoW in **windowed** or **windowed (fullscreen)** mode; overlays cannot draw over exclusive fullscreen. Click **Unlock overlay** to drag it over your chat frame, then **Lock** it so clicks pass through to the game.
+
+The companion window shows when the chat log was last written, and **Test model** sends a fixed Chinese line to the configured model and shows the answer and how long it took.
+
+WoW buffers the chat log and may only write it to disk when the file closes. To make lines arrive while you play, the addon turns logging off and on again half a second after chat activity, which closes and reopens the file. Turn this off with `/tr flush` if it causes trouble.
 
 ## Not yet verified on the Forever beta
 

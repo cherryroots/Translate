@@ -57,6 +57,8 @@ pub fn spawn(config: Arc<Mutex<Config>>, jobs: Sender<Job>, ui: UiSender) {
                     if let Ok(n) = f.take(len - pos).read_to_end(&mut chunk) {
                         pos += n as u64;
                         partial.extend_from_slice(&chunk);
+                        let lines = partial.iter().filter(|&&b| b == b'\n').count();
+                        ui.send(UiEvent::LogGrew { lines });
                         while let Some(nl) = partial.iter().position(|&b| b == b'\n') {
                             let raw: Vec<u8> = partial.drain(..=nl).collect();
                             let line = String::from_utf8_lossy(&raw);
