@@ -77,7 +77,7 @@ To debug the strip, take a screenshot and run `translate-companion --decode scre
 
 ## Making a release
 
-Run the **Build** workflow from the Actions tab with a tag such as `v0.2.0` in the *release* box, or push a `v*` tag. The workflow builds everything and publishes the release with notes generated from the merged pull requests. Bump `## Version` in `Translate.toc` and `version` in `companion/Cargo.toml` first.
+Run the **Build** workflow from the Actions tab with a tag such as `v0.2.0` in the *release* box, or push a `v*` tag. The workflow builds everything and publishes the release with notes generated from the merged pull requests. The tag sets the version: a `v0.2.0` run first commits "Release v0.2.0" to main with `## Version` in `Translate.toc` and the companion version in `companion/Cargo.toml` and `Cargo.lock` set to 0.2.0, then builds and tags that commit. There is nothing to bump by hand. Prefer the release box: a pushed tag stays on the commit you tagged, before the version commit.
 
 ## License
 
