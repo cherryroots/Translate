@@ -30,10 +30,17 @@ const SLANG: &str = "\
 老板=buyer;打工=booster;带人=carry;求带=LF carry;代练=boosting;需求=need;贪婪=greed;分装=loot split;毕业=BiS;拍卖行=AH;收购=WTB;出售=WTS;\
 公会=guild;工会=guild;收人=recruiting;招人=recruiting;散人=pug;大佬=pro;萌新=new player;菜鸟=noob;稍等=one sec;马上=coming;挂机=AFK;下线=logging off;\
 战场=battleground;竞技场=arena;部落=Horde;联盟=Alliance;\
-熔火之心=Molten Core;黑翼=BWL;祖格=ZG;安其拉=AQ;纳克萨玛斯=Naxx;死矿=Deadmines;血色=Scarlet Monastery;斯坦索姆=Stratholme;通灵学院=Scholomance;黑石深渊=BRD;厄运之槌=Dire Maul";
+熔火之心=Molten Core;黑翼=BWL;祖格=ZG;安其拉=AQ;纳克萨玛斯=Naxx;死矿=Deadmines;血色=Scarlet Monastery;斯坦索姆=Stratholme;通灵学院=Scholomance;黑石深渊=BRD;厄运之槌=Dire Maul;\
+任务=quest;做任务=questing;接任务=pick up the quest;交任务=turn in the quest;任务线=quest chain;任务路线=quest route;主线=main questline;支线=side quest;\
+日常=dailies;周常=weeklies;声望=reputation;崇拜=exalted;崇敬=revered;练级=leveling;满级=max level;经验=XP;\
+刷本=farming dungeons;打本=running dungeons;刷怪=grinding mobs;精英=elite;稀有=rare;世界首领=world boss;野外=open world;\
+坐骑=mount;飞行点=flight path;炉石=hearthstone;传送门=portal;邮箱=mailbox;金币=gold;装等=item level;装备=gear;附魔=enchant;宝石=gem;\
+专业=profession;采药=herbalism;挖矿=mining;剥皮=skinning;锻造=blacksmithing;炼金=alchemy;裁缝=tailoring;工程=engineering;珠宝=jewelcrafting;铭文=inscription;烹饪=cooking;钓鱼=fishing;急救=first aid;\
+仇恨=aggro;嘲讽=taunt;打断=interrupt;驱散=dispel;变羊=sheep;复活=res;战复=battle res;嗜血=Bloodlust;没蓝=OOM;回蓝=drinking;喝水=drinking;\
+邀请=invite;组我=invite me;密我=whisper me;退组=leaving the group;求组=LFG;路线=route";
 
 /// The slang terms in a line, longest first, skipping any term that is
-/// part of a longer match (奶 inside 奶骑). At most 8 to keep prompts short.
+/// part of a longer match (奶 inside 奶骑). At most 12 to keep prompts short.
 fn slang_in(text: &str) -> Vec<(&'static str, &'static str)> {
     let mut found: Vec<(&str, &str)> = SLANG
         .split(';')
@@ -47,7 +54,7 @@ fn slang_in(text: &str) -> Vec<(&'static str, &'static str)> {
             kept.push((zh, en));
         }
     }
-    kept.truncate(8);
+    kept.truncate(12);
     kept
 }
 
@@ -172,6 +179,14 @@ mod tests {
     use super::*;
     use std::io::{Read, Write};
     use std::net::TcpListener;
+
+    #[test]
+    fn quest_words_use_wow_meanings() {
+        let found = slang_in("我不太熟悉任务路线，谁能带我做任务");
+        assert!(found.contains(&("做任务", "questing")));
+        assert!(found.contains(&("任务路线", "quest route")));
+        assert_eq!(slang_in("还差一个任务"), vec![("任务", "quest")]);
+    }
 
     #[test]
     fn cleans_reply() {
