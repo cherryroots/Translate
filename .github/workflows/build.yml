@@ -22,16 +22,14 @@ jobs:
             os: windows-latest
             target: x86_64-pc-windows-msvc
             exe: translate-companion.exe
-          - name: macos-arm64
+          # One job builds both Mac architectures and joins them with lipo,
+          # so only one macOS runner is queued.
+          - name: macos-universal
             os: macos-latest
-            target: aarch64-apple-darwin
-            exe: translate-companion
-          - name: macos-x64
-            os: macos-latest
-            target: x86_64-apple-darwin
+            target: aarch64-apple-darwin,x86_64-apple-darwin
             exe: translate-companion
           - name: linux-x64
-            os: ubuntu-latest
+            os: ubuntu-24.04
             target: x86_64-unknown-linux-gnu
             exe: translate-companion
     defaults:
@@ -39,7 +37,7 @@ jobs:
         shell: bash
         working-directory: companion
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -63,14 +61,24 @@ jobs:
         run: cargo test --locked
 
       - name: Build
-        run: cargo build --release --locked --target ${{ matrix.target }}
+        run: |
+          for t in ${MATRIX_TARGET//,/ }; do
+            cargo build --release --locked --target "$t"
+          done
+        env:
+          MATRIX_TARGET: ${{ matrix.target }}
 
       # Upload the program itself rather than an archive of it.
       - name: Rename
         run: |
           mkdir -p ../dist
           ext=""; [ "${{ runner.os }}" = "Windows" ] && ext=".exe"
-          cp target/${{ matrix.target }}/release/${{ matrix.exe }} ../dist/translate-companion-${{ matrix.name }}$ext
+          out=../dist/translate-companion-${{ matrix.name }}$ext
+          bins=()
+          for t in ${MATRIX_TARGET//,/ }; do bins+=("target/$t/release/${{ matrix.exe }}"); done
+          if [ ${#bins[@]} -gt 1 ]; then lipo -create -output "$out" "${bins[@]}"; else cp "${bins[0]}" "$out"; fi
+        env:
+          MATRIX_TARGET: ${{ matrix.target }}
 
       - uses: actions/upload-artifact@v7
         with:
@@ -79,15 +87,15 @@ jobs:
 
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: dist/translate-companion-${{ matrix.name }}*
 
   addon:
     name: Addon
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Check Lua syntax
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq lua5.1
@@ -104,6 +112,6 @@ jobs:
 
       - name: Attach to release
         if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@v3
         with:
           files: Translate-addon.zip
