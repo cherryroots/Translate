@@ -57,22 +57,23 @@ jobs:
       - name: Build
         run: cargo build --release --locked --target ${{ matrix.target }}
 
-      # Archive before upload so the Mac and Linux binaries keep their execute bit.
-      - name: Package
+      # Upload the program itself rather than an archive of it.
+      - name: Rename
         run: |
           mkdir -p ../dist
-          cp target/${{ matrix.target }}/release/${{ matrix.exe }} ../dist/
-          cd ../dist
-          if [ "${{ runner.os }}" = "Windows" ]; then
-            7z a ../translate-companion-${{ matrix.name }}.zip ${{ matrix.exe }}
-          else
-            tar czf ../translate-companion-${{ matrix.name }}.tar.gz ${{ matrix.exe }}
-          fi
+          ext=""; [ "${{ runner.os }}" = "Windows" ] && ext=".exe"
+          cp target/${{ matrix.target }}/release/${{ matrix.exe }} ../dist/translate-companion-${{ matrix.name }}$ext
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
-          name: translate-companion-${{ matrix.name }}
-          path: translate-companion-${{ matrix.name }}.*
+          path: dist/translate-companion-${{ matrix.name }}*
+          archive: false
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/translate-companion-${{ matrix.name }}*
 
   addon:
     name: Addon
@@ -83,23 +84,18 @@ jobs:
         run: |
           sudo apt-get update -qq && sudo apt-get install -y -qq lua5.1
           for f in addon/Translate/*.lua; do luac5.1 -p "$f"; done
-      - name: Package
-        run: cd addon && zip -r ../Translate-addon.zip Translate
-      - uses: actions/upload-artifact@v4
+      # GitHub zips folder artifacts once on download; the zip holds the Translate folder.
+      - uses: actions/upload-artifact@v7
         with:
           name: Translate-addon
-          path: Translate-addon.zip
+          path: addon/
 
-  release:
-    name: Release
-    if: startsWith(github.ref, 'refs/tags/v')
-    needs: [companion, addon]
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v4
+      - name: Zip for release
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: cd addon && zip -r ../Translate-addon.zip Translate
+
+      - name: Attach to release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
         with:
-          path: dist
-          merge-multiple: true
-      - uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*
+          files: Translate-addon.zip

@@ -34,7 +34,7 @@ Restart the client if the addon does not appear in the list. In game:
 
 Download a build from the **Actions** tab (open the latest *Build* run and grab `translate-companion-<your OS>` under Artifacts), from a tagged release, or build it yourself with `cargo build --release` inside `companion/`.
 
-On macOS the build is unsigned. After unpacking, run `xattr -d com.apple.quarantine translate-companion` once, or right-click it and choose Open.
+On macOS and Linux, browsers drop the execute permission, so run `chmod +x translate-companion-*` once. The macOS build is also unsigned: run `xattr -d com.apple.quarantine translate-companion-macos-*` or right-click it and choose Open.
 
 On first start it writes `config.json` next to the program. Open **Settings** in the app to set:
 
