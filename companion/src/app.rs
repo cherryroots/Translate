@@ -25,7 +25,12 @@ pub struct TranslateApp {
     overlay_rect: Option<egui::Rect>,
     test_result: String,
     strip_status: String,
+    fitted_height: f32,
 }
+
+/// Smallest companion window that shows every control with Settings closed.
+pub const MIN_WIDTH: f32 = 560.0;
+pub const MIN_HEIGHT: f32 = 150.0;
 
 impl TranslateApp {
     pub fn new(config: Arc<Mutex<Config>>, events: Receiver<UiEvent>, interactive: Sender<Job>) -> Self {
@@ -43,6 +48,7 @@ impl TranslateApp {
             locked: true,
             overlay_start,
             overlay_rect: None,
+            fitted_height: 0.0,
             test_result: String::new(),
             strip_status: "Starting the pixel strip reader".into(),
         }
@@ -96,7 +102,36 @@ impl TranslateApp {
     }
 
     fn control_panel(&mut self, root: &mut egui::Ui) {
-        egui::CentralPanel::default().show(root, |ui| {
+        let ctx = root.ctx().clone();
+        let panel = egui::CentralPanel::default().show(root, |ui| {
+            // Scrolls only when the screen is too short for the whole window.
+            egui::ScrollArea::vertical()
+                .auto_shrink([false, true])
+                .show(ui, |ui| self.control_contents(ui))
+                .content_size
+                .y
+        });
+        self.fit_window(&ctx, panel.inner);
+    }
+
+    /// Grows or shrinks the window to its contents, e.g. when Settings opens.
+    fn fit_window(&mut self, ctx: &egui::Context, content_height: f32) {
+        // Panel margins plus a few pixels so the scrollbar does not appear at an exact fit.
+        let margin = 2.0 * ctx.global_style().spacing.window_margin.topf().max(8.0) + 6.0;
+        let max = ctx
+            .input(|i| i.viewport().monitor_size)
+            .map_or(f32::INFINITY, |m| m.y * 0.9);
+        let wanted = (content_height + margin).clamp(MIN_HEIGHT, max.max(MIN_HEIGHT));
+        if (wanted - self.fitted_height).abs() < 1.0 {
+            return;
+        }
+        self.fitted_height = wanted;
+        let width = ctx.input(|i| i.viewport().inner_rect).map_or(MIN_WIDTH, |r| r.width());
+        ctx.send_viewport_cmd(ViewportCommand::InnerSize(egui::vec2(width, wanted)));
+    }
+
+    fn control_contents(&mut self, ui: &mut egui::Ui) {
+        {
             ui.heading("Translate companion");
             ui.label(&self.status);
             if !self.notice.is_empty() {
@@ -171,7 +206,7 @@ impl TranslateApp {
                     self.save();
                 }
             });
-        });
+        }
     }
 
     fn overlay(&mut self, ctx: &egui::Context) {
