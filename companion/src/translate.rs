@@ -17,21 +17,88 @@ pub enum Direction {
     ToChinese,
 }
 
+/// WoW slang the general-purpose prompt explains and HY-MT receives as
+/// terminology hints, for the terms that appear in the line.
+const SLANG: &[(&str, &str)] = &[
+    ("奶妈", "healer"),
+    ("缺奶", "need a healer"),
+    ("治疗", "healer"),
+    ("坦克", "tank"),
+    ("缺T", "need a tank"),
+    ("输出", "DPS"),
+    ("来人", "LF more"),
+    ("缺人", "LF more"),
+    ("组队", "LFG"),
+    ("车队", "group run"),
+    ("开车", "starting the run"),
+    ("金团", "GDKP run"),
+    ("老板", "buyer"),
+    ("打工", "booster"),
+    ("散人", "pug"),
+    ("公会", "guild"),
+    ("工会", "guild"),
+    ("副本", "dungeon"),
+];
+
+/// Tencent's HY-MT models want their own prompt and no system message.
+fn is_hy_mt(model: &str) -> bool {
+    let m = model.to_lowercase();
+    m.contains("hy-mt") || m.contains("hunyuan-mt")
+}
+
+/// Builds the request body for either prompt style.
+fn request_body(model: &str, text: &str, direction: Direction) -> Value {
+    if !is_hy_mt(model) {
+        let system = match direction {
+            Direction::ToEnglish => TO_ENGLISH,
+            Direction::ToChinese => TO_CHINESE,
+        };
+        return json!({
+            "model": model,
+            "temperature": 0.2,
+            "messages": [
+                { "role": "system", "content": system },
+                { "role": "user", "content": text },
+            ],
+        });
+    }
+
+    // Templates and sampling settings from the HY-MT1.5 model card.
+    let target = match direction {
+        Direction::ToEnglish => "英语",
+        Direction::ToChinese => "中文",
+    };
+    let terms: Vec<String> = match direction {
+        Direction::ToEnglish => SLANG
+            .iter()
+            .filter(|(zh, _)| text.contains(zh))
+            .map(|(zh, en)| format!("{zh} 翻译成 {en}"))
+            .collect(),
+        Direction::ToChinese => Vec::new(),
+    };
+    let prompt = if terms.is_empty() {
+        format!("将以下文本翻译为{target}，注意只需要输出翻译后的结果，不要额外解释：\n\n{text}")
+    } else {
+        format!(
+            "参考下面的翻译：\n{}\n\n将以下文本翻译为{target}，注意只需要输出翻译后的结果，不要额外解释：\n{text}",
+            terms.join("\n")
+        )
+    };
+    json!({
+        "model": model,
+        "temperature": 0.7,
+        "top_p": 0.6,
+        // Read by llama.cpp and Ollama; other servers ignore them.
+        "top_k": 20,
+        "repeat_penalty": 1.05,
+        "messages": [{ "role": "user", "content": prompt }],
+    })
+}
+
 /// Sends one message to an OpenAI-compatible /chat/completions endpoint.
 pub fn translate(config: &Config, text: &str, direction: Direction) -> Result<String, String> {
-    let system = match direction {
-        Direction::ToEnglish => TO_ENGLISH,
-        Direction::ToChinese => TO_CHINESE,
-    };
     let url = format!("{}/chat/completions", config.api_base.trim_end_matches('/'));
-    let body = json!({
-        "model": config.model,
-        "temperature": 0.2,
-        "messages": [
-            { "role": "system", "content": system },
-            { "role": "user", "content": text },
-        ],
-    });
+    let body = request_body(&config.model, text, direction);
 
     let mut request = ureq::post(&url).timeout(Duration::from_secs(60));
     if !config.api_key.is_empty() {
@@ -107,5 +174,27 @@ mod tests {
         let request = server.join().unwrap();
         assert!(request.starts_with("POST /v1/chat/completions"));
         assert!(request.contains("Bearer secret"));
+    }
+
+    #[test]
+    fn hy_mt_uses_model_card_prompt_and_glossary() {
+        let body = request_body("hf.co/tencent/HY-MT1.5-7B-GGUF:Q4_K_M", "金团来人 缺奶", Direction::ToEnglish);
+        let messages = body["messages"].as_array().unwrap();
+        assert_eq!(messages.len(), 1, "HY-MT takes no system prompt");
+        let prompt = messages[0]["content"].as_str().unwrap();
+        assert!(prompt.starts_with("参考下面的翻译：\n"));
+        assert!(prompt.contains("金团 翻译成 GDKP run"));
+        assert!(prompt.contains("缺奶 翻译成 need a healer"));
+        assert!(!prompt.contains("坦克"));
+        assert!(prompt.ends_with("不要额外解释：\n金团来人 缺奶"));
+        assert_eq!(body["top_k"], 20);
+
+        let plain = request_body("HY-MT1.5-7B", "你好", Direction::ToEnglish);
+        assert_eq!(
+            plain["messages"][0]["content"],
+            "将以下文本翻译为英语，注意只需要输出翻译后的结果，不要额外解释：\n\n你好"
+        );
+        let general = request_body("qwen2.5:7b", "你好", Direction::ToEnglish);
+        assert_eq!(general["messages"][0]["role"], "system");
     }
 }

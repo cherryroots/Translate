@@ -32,10 +32,16 @@ Restart the client if the addon does not appear in the list. In game:
 
 ## Run the companion
 
-Build with `cargo build --release` inside `companion/` (or use a prebuilt `translate-companion.exe`). On first start it writes `config.json` next to the exe. Open **Settings** in the app to set:
+Download a build from the **Actions** tab (open the latest *Build* run and grab `translate-companion-<your OS>` under Artifacts), from a tagged release, or build it yourself with `cargo build --release` inside `companion/`.
+
+On macOS the build is unsigned. After unpacking, run `xattr -d com.apple.quarantine translate-companion` once, or right-click it and choose Open.
+
+On first start it writes `config.json` next to the program. Open **Settings** in the app to set:
 
 - **Chat log file:** defaults to `C:\Program Files (x86)\World of Warcraft\_classic_beta_\Logs\WoWChatLog.txt`.
-- **API base URL / key / model:** any OpenAI-compatible endpoint. The default is a local [Ollama](https://ollama.com) server (`http://localhost:11434/v1`, model `qwen2.5:7b`, no key), which is free, offline and good at Chinese. For OpenAI use `https://api.openai.com/v1` with your key and a model such as `gpt-4o-mini`.
+- **API base URL / key / model:** any OpenAI-compatible endpoint. The default is Tencent's translation model [HY-MT1.5-7B](https://huggingface.co/tencent/HY-MT1.5-7B-GGUF) on a local [Ollama](https://ollama.com) server: run `ollama pull hf.co/tencent/HY-MT1.5-7B-GGUF:Q4_K_M` once (4.6 GB). It is free and works offline. For OpenAI use `https://api.openai.com/v1` with your key and a model such as `gpt-4o-mini`; for a general local model try `qwen2.5:7b`.
+
+When the model name contains `hy-mt`, the companion switches to HY-MT's own prompt and sampling settings from its model card, and passes the WoW slang found in each line (金团, 缺奶, 坦克...) as terminology hints. Other models get a system prompt that explains the slang instead.
 
 Run WoW in **windowed** or **windowed (fullscreen)** mode; overlays cannot draw over exclusive fullscreen. Click **Unlock overlay** to drag it over your chat frame, then **Lock** it so clicks pass through to the game.
 

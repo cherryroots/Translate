@@ -28,7 +28,7 @@ impl Default for Config {
                 .into(),
             api_base: "http://localhost:11434/v1".into(),
             api_key: String::new(),
-            model: "qwen2.5:7b".into(),
+            model: "hf.co/tencent/HY-MT1.5-7B-GGUF:Q4_K_M".into(),
             overlay_x: 20.0,
             overlay_y: 420.0,
             overlay_width: 520.0,
