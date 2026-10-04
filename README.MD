@@ -63,3 +63,7 @@ To debug the strip, take a screenshot and run `translate-companion --decode scre
 ## Icon
 
 `assets/icon.svg` is the source for both icons. `companion/icon.png` is the window icon, `companion/icon.ico` is built into the Windows exe, and `addon/Translate/icon.tga` is shown in the AddOns list through `## IconTexture`. To change the icon, edit the SVG and re-export those three files at the same sizes.
+
+## License
+
+MIT, see [LICENSE](LICENSE). Contributions are welcome: see [CONTRIBUTING.md](CONTRIBUTING.md).

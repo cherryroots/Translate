@@ -1,0 +1,41 @@
+name: Bug report
+description: Something in the addon or companion app does not work
+labels: [bug]
+body:
+  - type: dropdown
+    id: part
+    attributes:
+      label: Which part?
+      options:
+        - Addon (in game)
+        - Companion app
+        - Both / not sure
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened, and what did you expect?
+      description: Leave player names out of any chat lines you paste.
+    validations:
+      required: true
+  - type: input
+    id: client
+    attributes:
+      label: WoW client and interface number
+      description: "WoW: Forever or retail, plus the output of /dump select(4, GetBuildInfo())"
+  - type: input
+    id: os
+    attributes:
+      label: Operating system and companion version
+      description: For example Windows 11, build from the Actions run of 2026-10-04
+  - type: input
+    id: model
+    attributes:
+      label: Translation server and model
+      description: For example LM Studio with HY-MT1.5-7B
+  - type: textarea
+    id: probe
+    attributes:
+      label: /tr probe output, errors or screenshots
+      description: For strip problems, attach a screenshot and the output of `translate-companion --decode screenshot.png`.
