@@ -26,6 +26,7 @@ pub struct TranslateApp {
     test_result: String,
     strip_status: String,
     fitted_height: f32,
+    wow_focused: Option<bool>,
 }
 
 /// Smallest companion window that shows every control with Settings closed.
@@ -49,6 +50,7 @@ impl TranslateApp {
             overlay_start,
             overlay_rect: None,
             fitted_height: 0.0,
+            wow_focused: None,
             test_result: String::new(),
             strip_status: "Starting the pixel strip reader".into(),
         }
@@ -84,6 +86,7 @@ impl TranslateApp {
                     };
                 }
                 UiEvent::Strip(text) => self.strip_status = text,
+                UiEvent::WowFocused(focused) => self.wow_focused = focused,
                 UiEvent::Status(text) => self.status = text,
             }
         }
@@ -173,6 +176,7 @@ impl TranslateApp {
                     self.lines.clear();
                 }
                 ui.checkbox(&mut self.draft.show_original, "Show Chinese too");
+                ui.checkbox(&mut self.draft.hide_when_unfocused, "Hide when WoW is in the background");
             });
 
             egui::CollapsingHeader::new("Settings").default_open(false).show(ui, |ui| {
@@ -221,6 +225,9 @@ impl TranslateApp {
             .with_inner_size([self.draft.overlay_width, self.draft.overlay_height]);
 
         let locked = self.locked;
+        // The window stays open while hidden: showing it again could take
+        // focus from WoW. It just draws nothing and lets clicks through.
+        let hidden = locked && self.draft.hide_when_unfocused && self.wow_focused == Some(false);
         let draft = self.draft.clone();
         let lines = &self.lines;
         let mut rect = self.overlay_rect;
@@ -228,6 +235,9 @@ impl TranslateApp {
         ctx.show_viewport_immediate(ViewportId::from_hash_of("overlay"), builder, |root, _class| {
             let ctx = root.ctx().clone();
             rect = ctx.input(|i| i.viewport().outer_rect).or(rect);
+            if hidden {
+                return;
+            }
             let alpha = (draft.overlay_opacity * 255.0) as u8;
             let fill = if locked {
                 Color32::from_black_alpha(alpha)

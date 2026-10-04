@@ -3,6 +3,7 @@
 mod app;
 mod clipboard;
 mod config;
+mod focus;
 mod strip;
 mod text;
 mod translate;
@@ -89,6 +90,7 @@ fn main() -> eframe::Result {
             worker::spawn(config.clone(), strip_rx, ui.clone(), clip_tx.clone());
             worker::spawn(config.clone(), interactive_rx, ui.clone(), clip_tx);
             strip::spawn(strip_tx, ui.clone());
+            focus::spawn(ui.clone());
             clipboard::spawn(clip_rx, interactive_tx.clone(), ui);
 
             Ok(Box::new(app::TranslateApp::new(config, ui_rx, interactive_tx)))
